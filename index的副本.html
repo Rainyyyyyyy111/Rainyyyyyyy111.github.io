@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>打车软件</title>
+    <style>
+        /* 在这里添加CSS样式 */
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            width: 300px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            text-align: center;
+        }
+        input, button {
+            margin: 10px 0;
+            padding: 10px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>欢迎使用北斗出行</h1>
+        <input type="text" placeholder="输入起点" id="pickup-location">
+        <input type="text" placeholder="输入终点" id="dropoff-location">
+        <button id="book-ride">预约车辆</button>
+    </div>
+<iframe width="600" height="450" frameborder="0" style="border:0"
+src="http://api.map.baidu.com/marker?location=117.066626,36.679022&title=我的位置&content=百度奎科大厦&output=html&src=webapp.baidu.openAPIdemo
+//调起百度PC或web地图，且在（lat:39.916979519873，lng:116.41004950566）坐标点上显示名称"我的位置"，内容"百度奎科大厦"的信息窗口。 
+ ></iframe>
+
+
+    <script>
+        // 在这里添加JavaScript代码
+        document.getElementById('book-ride').addEventListener('click', function() {
+            var pickupLocation = document.getElementById('pickup-location').value;
+            var dropoffLocation = document.getElementById('dropoff-location').value;
+            alert('从 ' + pickupLocation + ' 到 ' + dropoffLocation + ' 的车已预约！');
+        });
+    </script>
+</body>
+</html>
