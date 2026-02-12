@@ -1,76 +1,49 @@
-# ==============================================================================
-# 1. 基础镜像选择
-# 必须使用 'devel' 版本，因为它包含 nvcc 编译器，这是编译 OpenFold 的硬性条件。
-# ==============================================================================
+# 1. 必须保留 devel 镜像，因为编译 OpenFold 需要 NVCC
 FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
 
-# ==============================================================================
-# 2. 环境变量设置
-# ==============================================================================
+# 2. 基础设置
 ENV DEBIAN_FRONTEND=noninteractive
-# 显式指定 CUDA 架构，覆盖常见的 HPC 卡 (V100, A100, A40, H100)
 ENV TORCH_CUDA_ARCH_LIST="7.0 7.5 8.0 8.6 8.9 9.0+PTX"
 ENV FORCE_CUDA="1"
-# 确保编译时能找到 CUDA
 ENV CUDA_HOME="/usr/local/cuda"
 
-# ==============================================================================
-# 3. 系统依赖安装
-# git/wget: 下载源码
-# build-essential: 编译 C++ 扩展
-# ==============================================================================
-RUN apt-get update && apt-get install -y \
+# 3. 最小化系统依赖 (只装必须的)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     wget \
     python3 \
     python3-pip \
     python3-dev \
     build-essential \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -s /usr/bin/python3 /usr/bin/python
 
-# 建立 python 到 python3 的软链接，方便脚本调用
-RUN ln -s /usr/bin/python3 /usr/bin/python
-
-# ==============================================================================
-# 4. 核心 Python 环境 (PyTorch)
-# 安装与 CUDA 11.8 对应的 PyTorch 版本
-# ==============================================================================
+# 4. 核心：安装 PyTorch (增加 --no-cache-dir 防止爆内存/磁盘)
+# 这一步最容易挂，所以单独放
 RUN python3 -m pip install --upgrade pip && \
-    pip install torch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cu118
+    pip install --no-cache-dir torch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cu118
 
-# ==============================================================================
-# 5. 科学计算与生物信息 "安全网" (防止隐式依赖缺失)
-# einops, omegaconf, biopython 是这里的重点
-# ==============================================================================
-RUN pip install \
+# 5. 安装脚本所需的轻量级依赖
+# biotite/pandas/tqdm 是你的 calc_scrmsd.py 必须的
+# einops/omegaconf 是 ESMFold/OpenFold 运行必须的
+RUN pip install --no-cache-dir \
     numpy \
     pandas \
     scipy \
     biotite \
     tqdm \
-    biopython \
     einops \
     omegaconf \
-    ml-collections \
-    model-index
+    ml-collections
 
-# ==============================================================================
-# 6. 安装复杂依赖 (DLLogger & OpenFold)
-# ==============================================================================
-# 6.1 安装 NVIDIA DLLogger (OpenFold 前置)
-RUN pip install "git+https://github.com/NVIDIA/dllogger.git"
+# 6. 安装 OpenFold 组件 (最耗时步骤)
+# 先装 dllogger
+RUN pip install --no-cache-dir "git+https://github.com/NVIDIA/dllogger.git"
 
-# 6.2 安装 OpenFold
-# 这是一个耗时步骤，GitHub Runner 可能会跑 10-20 分钟
-RUN pip install "git+https://github.com/aqlaboratory/openfold.git@4b41059694619831a7db195b7e0988fc4ff3a307"
+# 再装 OpenFold (编译过程约 10-20 分钟)
+RUN pip install --no-cache-dir "git+https://github.com/aqlaboratory/openfold.git@4b41059694619831a7db195b7e0988fc4ff3a307"
 
-# ==============================================================================
-# 7. 安装 ESMFold
-# ==============================================================================
-RUN pip install "fair-esm[esmfold]"
+# 7. 最后安装 ESMFold
+RUN pip install --no-cache-dir "fair-esm[esmfold]"
 
-# ==============================================================================
-# 8. 收尾工作
-# ==============================================================================
 WORKDIR /workspace
-CMD ["python3"]
